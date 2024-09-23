@@ -1,0 +1,23 @@
+program ProjetoMVC;
+
+
+
+uses
+  Forms,
+  unitCadastro in 'View\unitCadastro.pas' {frmCadastroClientes},
+  classeCliente in 'Model\classeCliente.pas',
+  controleCliente in 'Controller\controleCliente.pas',
+  controlePedido in 'Controller\controlePedido.pas',
+  controleProduto in 'Controller\controleProduto.pas',
+  classePedido in 'Model\classePedido.pas',
+  classeProduto in 'Model\classeProduto.pas',
+  unitPedido in 'View\unitPedido.pas' {frmCadastroPedido};
+
+{$R *.res}
+
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  Application.CreateForm(TfrmCadastroPedido, frmCadastroPedido);
+  Application.Run;
+end.

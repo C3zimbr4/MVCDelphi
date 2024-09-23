@@ -1,0 +1,61 @@
+unit controleCliente;
+
+interface
+
+uses
+  classeCliente;
+
+type
+  TControleCliente = class
+  private
+    // função privada para validar o CPF do cliente
+    function ValidarUF(UF: string): boolean;
+  public
+    // procedimento para salvar o cliente
+    procedure Salvar(const objetoCliente: TCliente);
+  end;
+
+implementation
+
+uses
+  StrUtils, SysUtils;
+
+{ TControleCliente }
+
+procedure TControleCliente.Salvar(const objetoCliente: TCliente);
+begin
+  { para exemplificar, utilizei exceções para abortar a instrução
+    mas sugiro um tratamento mais amigável,
+    utilizando try..except com mensagens de aviso }
+
+  if objetoCliente.Codigo = 0 then
+    raise Exception.Create('Preencha o código do cliente.');
+
+  if objetoCliente.Nome= '' then
+    raise Exception.Create('Preencha o nome do cliente.');
+
+  if not (ValidarUF(objetoCliente.UF)) then
+    raise Exception.Create('CPF inválido!');
+
+  // se o objeto for válido, o método Salvar é invocado
+  objetoCliente.Salvar(objetoCliente);
+end;
+
+
+
+function TControleCliente.ValidarUF(UF: string): boolean;
+const
+Estados = 'SPMGRJRSSCPRESDFMTMSGOTOBASEALPBPEMARNCEPIPAAMAPFNACRRRO';
+var
+Posicao : integer;
+begin
+  Result := true;
+  if UF <> '' then begin
+     Posicao := Pos(UpperCase(UF), Estados);
+  end;
+  if (Posicao = 0) or ((Posicao mod 2) = 0) then begin
+     Result := false;
+  end;
+end;
+
+end.

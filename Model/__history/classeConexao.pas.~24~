@@ -1,0 +1,141 @@
+unit classeConexao;
+
+interface
+
+uses
+  Dialogs, FireDAC.Stan.Intf, System.IniFiles,
+  FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf,
+  FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys,
+  FireDAC.VCLUI.Wait, FireDAC.Stan.Param, FireDAC.DatS, FireDAC.DApt.Intf,
+  FireDAC.DApt, Data.DB, FireDAC.Comp.DataSet, FireDAC.Comp.Client, FireDAC.Phys.MySQL, FireDAC.Phys.MySQLDef;
+
+type
+  TConexao = class
+  private
+    FDConnection1: TFDConnection;
+    FDPhysMySQLDriverLink1: TFDPhysMySQLDriverLink;
+    FDTransaction1: TFDTransaction;
+    FDQuery1: TFDQuery;
+
+    procedure MontaParamsConexao;
+    Function LeConfig : Boolean;
+    Function AcessaBanco: Boolean;
+
+  public
+    varquivo: string;
+    hostname: string;
+    vDriverID: string;
+    vusername: string;
+    vpassword: string;
+    vport: string;
+    vendorLib: string;
+    // métodos públicos da classe
+    constructor Create;
+
+
+    // propriedades da classe (semelhante aos getters and setters)
+  end;
+
+implementation
+
+uses
+  SysUtils;
+
+{ TCliente }
+
+function TConexao.AcessaBanco: Boolean;
+begin
+  IF LeConfig() then
+  begin
+     try
+       //Passa os parâmetros para o objeto Conexão
+       FDConnection1.Connected := false;
+       FDConnection1.LoginPrompt := false;
+       FDPhysMySQLDriverLink1.VendorLib := vendorLib;
+
+       FDConnection1.DriverName := 'MySQL';
+       FDConnection1.Params.Clear;
+       FDConnection1.Params.Add('Server='+ hostname);
+       FDConnection1.Params.Add('Database='+ varquivo);
+       FDConnection1.Params.Add('User_name=SYSDBA');
+       FDConnection1.Params.Add('Password=masterkey');
+       FDConnection1.Params.Add('DriverID=MySQL');
+       FDConnection1.Params.Add('Protocol=TCP');
+       FDConnection1.Params.Add('Port=33050');
+
+        //FDConnection1.Params.Add('Database='+ Database);
+
+        FDConnection1.Connected:=True;
+     Except
+        on E:Exception do
+           begin
+            ShowMessage('Erro ao carregar parâmetros de conexão!' + sLineBreak + E.Message);
+            result := False;
+           end;
+     end;
+     Result := FDConnection1.Connected;
+  end
+  else
+  begin
+      ShowMessage('Não existe o arquivo de banco de dados');
+      result:=False;
+  end;
+end;
+
+constructor TConexao.Create;
+begin
+  // inicialização dos valores do objeto
+  MontaParamsConexao;
+  FDTransaction1.Connection := FDConnection1;
+  FDQuery1.Transaction := FDTransaction1;
+
+end;
+
+function TConexao.LeConfig: Boolean;
+var
+    vinis : TIniFile;
+    vaqui : string;
+Begin
+    vaqui := GetCurrentDir;
+    vaqui := Trim(vaqui);
+    vendorLib := vaqui + '\libmysql.dll';
+    IF Fileexists(vaqui+'\SConfig.ini') then
+    Begin
+        vinis := TiniFile.create(vaqui+'\SConfig.ini');
+        With vinis do
+        Begin
+            varquivo:= ReadString('Configuracoes','Database','');
+            hostname:= ReadString('Configuracoes','Server','');
+            vDriverID:= ReadString('Configuracoes','DriverID','');
+            vusername:= ReadString('Configuracoes','username','');
+            vpassword:= ReadString('Configuracoes','password','');
+            vport:= ReadString('Configuracoes','port','');
+            Free;
+            result := True
+        end;
+    end
+    Else
+    Begin
+        result := False;
+        ShowMessage('Arquivo de Configuração do Sistema não encontrado');
+    end;
+end;
+
+{ a rotina para salvar o cliente no banco de dados deve ser escrita aqui
+  FDConnection1 := MontaParamsConexao;
+  FDTransaction1.Connection := FDConnection1;
+  FDQuery1.Transaction := FDTransaction1;
+  FDQuery1.SQL.Add('insert into cliente values ');
+  FDQuery1.SQL.Add('('+ FNome +  ',' + FCidade +  ',' + FUF +  ')');
+  FDQuery1.ExecSQL;
+  }
+
+procedure TConexao.MontaParamsConexao;
+begin
+ if not Acessabanco() then
+ begin
+   ShowMessage('Não foi possível abrir o banco de dados.');
+ end;
+end;
+
+end.

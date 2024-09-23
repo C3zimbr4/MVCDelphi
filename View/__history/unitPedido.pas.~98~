@@ -1,0 +1,274 @@
+unit unitPedido;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, Mask, StdCtrls, ExtCtrls, Buttons, Vcl.Consts, Vcl.Grids, SortGrid, Data.DB,
+  Datasnap.DBClient, System.UITypes;
+
+type
+  TfrmCadastroPedido = class(TForm)
+    lblTitulo: TLabel;
+    Panel: TPanel;
+    lblCodigo: TLabel;
+    edtCodigo: TEdit;
+    Panel1: TPanel;
+    btnSalvar: TBitBtn;
+    GridItems: TStringGrid;
+    lblInfo1: TLabel;
+    lblTotal: TLabel;
+    lblCodCli: TLabel;
+    edtCodCli: TEdit;
+    edtNomeCli: TEdit;
+    Label1: TLabel;
+    edtCodProd: TEdit;
+    edtDescProd: TEdit;
+    lblCPF: TLabel;
+    btnIncluir: TBitBtn;
+    edtQtidade: TEdit;
+    procedure btnSalvarClick(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure FormActivate(Sender: TObject);
+    procedure edtCodCliExit(Sender: TObject);
+    procedure edtCodProdExit(Sender: TObject);
+    procedure btnIncluirClick(Sender: TObject);
+    procedure edtCodigoExit(Sender: TObject);
+    procedure GridItemsSelectCell(Sender: TObject; ACol, ARow: LongInt;
+      var CanSelect: Boolean);
+  private
+    { Private declarations }
+    cont: integer;
+    preco: currency;
+    remonta: boolean;
+
+    procedure MontaItens;
+    procedure Inicializa;
+  public
+    { Public declarations }
+  end;
+
+var
+  frmCadastroPedido: TfrmCadastroPedido;
+
+implementation
+
+uses
+  classePedido, controlePedido, classeCliente, controleCliente,
+  classeProduto, controleProduto, classeItem, controleItem;
+
+{$R *.dfm}
+
+procedure TfrmCadastroPedido.btnIncluirClick(Sender: TObject);
+var x: byte;
+    total: currency;
+begin
+  Inc(cont);
+  GridItems.cells[0,cont] := IntToStr(cont);
+  GridItems.cells[1,cont] := edtCodigo.Text;
+  GridItems.cells[2,cont] := edtCodProd.Text;
+  GridItems.cells[3,cont] := edtDescProd.Text;
+  GridItems.cells[4,cont] := edtQtidade.Text;
+  GridItems.cells[5,cont] := CurrToStr(preco);
+  GridItems.cells[6,cont] := CurrToStr(preco * StrToCurr(edtQtidade.Text));
+  total := 0;
+  for x := 1 to cont do
+    total := total + StrToCurr(GridItems.cells[6,x]);
+  lblTotal.Caption := 'Total: ' + CurrToStr(total);
+  GridItems.RowCount := GridItems.RowCount + 1;   //Esse componente não permite o uso do Inc();
+  edtCodProd.Text := '';
+  edtDescProd.Text := '';
+  edtQtidade.Text := '';
+  edtCodProd.SetFocus;
+end;
+
+procedure TfrmCadastroPedido.btnSalvarClick(Sender: TObject);
+var
+  // variáveis das camadas utilizadas na rotina
+  objetoItemPedido: TItemPedido;
+  objetoControle: TControleItem;
+  retorno: string;
+  x: byte;
+begin
+  for x := 1 to cont do
+  begin
+    try
+      objetoItemPedido:= TItemPedido.Create;
+      objetoControle:= TControleItem.Create;
+      objetoItemPedido.Codigo := StrToInt(GridItems.cells[0,x]);
+      objetoItemPedido.CodigoPedido := StrToInt(GridItems.cells[1,x]);
+      objetoItemPedido.CodigoProduto :=  StrToInt(GridItems.cells[2,x]);
+      objetoItemPedido.Qtidade :=  StrToCurr(GridItems.cells[4,x]);
+      objetoItemPedido.Preco :=  StrToCurr(GridItems.cells[5,x]);
+      retorno := objetoControle.Salvar(objetoItemPedido);
+      if retorno <> '' then
+        lblInfo1.Caption := retorno
+      else
+        lblInfo1.Caption := 'Dados Salvos com Sucesso';
+
+    finally
+      // liberação dos objetos da memória
+      FreeAndNil(objetoItemPedido);
+      FreeAndNil(objetoControle);
+      Inicializa();
+    end;
+
+  end;
+end;
+
+procedure TfrmCadastroPedido.edtCodCliExit(Sender: TObject);
+var
+  // variáveis das camadas utilizadas na rotina
+  objetoPedido: TPedido;
+  objetoControle: TControlePedido;
+  objetoCliente: TCliente;
+  objCntrlCliente: TControleCliente;
+  retorno: string;
+begin
+  if edtCodCli.Text <> '' then
+  begin
+    //primeiro valida a existência do Cliente
+    objetoCliente:= TCliente.Create;
+    objCntrlCliente:= TControleCliente.Create;
+    objetoCliente.Codigo := strtoint(edtCodCli.Text);
+    edtNomeCli.Text := objCntrlCliente.GetNome(objetoCliente);
+    if edtNomeCli.Text = '' then
+       edtNomeCli.Text := 'Cliente Não Encontrado'
+    else
+      begin
+        if not remonta then
+        begin
+          if MessageDlg('Deseja Gravar o Pedido e Prosseguir?', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+          begin
+            // instanciação dos objetos
+            objetoPedido  := TPedido.Create; // classe Modelo
+            objetoControle := TControlePedido.Create; // classe Controle
+            try
+              // preenchimento dos dados
+              objetoPedido.Codigo := StrToIntDef(edtCodigo.Text, 0);
+              objetoPedido.CodigoCliente := StrToIntDef(edtCodCli.Text, 0);
+
+              // chamada da rotina para gravação
+              retorno := objetoControle.Salvar(objetoPedido);
+              if retorno <> '' then
+                 lblInfo1.Caption := retorno
+              else
+                 lblInfo1.Caption := 'Dados Salvos com Sucesso';
+            finally
+              FreeAndNil(objetoPedido);
+              FreeAndNil(objetoControle);
+            end;
+          end
+          else
+            edtCodCli.SetFocus;
+        end;
+      end;
+    FreeAndNil(objetoCliente);
+    FreeAndNil(objCntrlCliente);
+  end;
+end;
+
+procedure TfrmCadastroPedido.edtCodigoExit(Sender: TObject);
+var
+  // variáveis das camadas utilizadas na rotina
+  objetoPedido: TPedido;
+  controlePedido: TControlePedido;
+begin
+  if edtCodigo.Text <> '' then
+  begin
+    objetoPedido := TPedido.Create;
+    controlePedido := TControlePedido.Create;
+    objetoPedido.Codigo := StrToInt(edtCodigo.Text);
+    objetoPedido := controlePedido.Buscar(ObjetoPedido);
+    //Se encontrou remontamos a tela com os dados já existentes
+    if objetoPedido.CodigoCliente > 0 then
+    begin
+      edtCodCli.Text := IntToStr(objetoPedido.CodigoCliente);
+      remonta := true;
+      edtCodCliExit(nil); //Montagem dos Edits do Cliente
+    end;
+    MontaItens();
+    remonta := false;
+    edtCodProd.SetFocus;
+  end;
+end;
+
+procedure TfrmCadastroPedido.edtCodProdExit(Sender: TObject);
+var
+  // variáveis das camadas utilizadas na rotina
+  objetoProduto: TProduto;
+  objetoCtrlProd: TControleProduto;
+begin
+  if edtCodProd.Text <> '' then
+  begin
+    objetoProduto:= TProduto.Create;
+    objetoCtrlProd:= TControleProduto.Create;
+    objetoProduto.Codigo := StrToInt(edtCodProd.Text);
+    edtDescProd.Text := objetoCtrlProd.GetNome(objetoProduto);
+    if edtDescProd.Text = '' then
+     edtDescProd.Text := 'Produto Não Encontrado';
+    preco := objetoCtrlProd.GetPreco(objetoProduto);
+  end;
+end;
+
+procedure TfrmCadastroPedido.FormActivate(Sender: TObject);
+begin
+  remonta := false;
+  cont := 0;
+  GridItems.cells[0,cont] := 'Item';
+  GridItems.cells[1,cont] := 'Pedido';
+  GridItems.cells[2,cont] := 'Cód. Prod.';
+  GridItems.cells[3,cont] := 'Produto';
+  GridItems.cells[4,cont] := 'Qtidade.';
+  GridItems.cells[5,cont] := 'Vlr. Unit.';
+  GridItems.cells[6,cont] := 'Vlr. Total';
+  lblTotal.Caption := 'Total: 0,00';
+end;
+
+procedure TfrmCadastroPedido.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if Key = VK_ESCAPE then
+    Close;
+end;
+
+procedure TfrmCadastroPedido.GridItemsSelectCell(Sender: TObject; ACol,
+  ARow: LongInt; var CanSelect: Boolean);
+begin
+   if ((ACol in [4,5]) and (ARow >= 1))then
+   begin
+     GridItems.Options.goEditing
+   end;
+end;
+
+procedure TfrmCadastroPedido.Inicializa;
+var x: byte;
+begin
+  //Limpa os campos para iniciar um novo pedido
+  edtCodCli.Text := '';
+  edtNomeCli.Text := '';
+  edtCodProd.Text := '';
+  edtDescProd.Text := '';
+  edtQtidade.Text := '';
+  edtCodigo.Text := '';
+  for x := 1 to cont do
+  begin
+    GridItems.cells[0,x].Empty;
+    GridItems.cells[1,x].Empty;
+    GridItems.cells[2,x].Empty;
+    GridItems.cells[3,x].Empty;
+    GridItems.cells[4,x].Empty;
+    GridItems.cells[5,x].Empty;
+    GridItems.cells[6,x].Empty;
+  end;
+  FormActivate(nil);
+end;
+
+procedure TfrmCadastroPedido.MontaItens;
+begin
+ //Aqui remontamos o String Grid com os Itens já gravados no Pedido anteriormente
+
+end;
+
+end.

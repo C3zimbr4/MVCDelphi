@@ -1,0 +1,39 @@
+unit controleItem;
+
+interface
+
+uses
+  classeItem;
+
+type
+  TControleItem = class
+  private
+
+  public
+    // procedimento para salvar o Item
+    function Validar(const objetoItem: TItemPedido): string;
+  end;
+
+implementation
+
+uses
+  StrUtils, SysUtils;
+
+{ TControleItem }
+
+function TControleItem.Validar(const objetoItem: TItemPedido): string;
+var retorno: string;
+begin
+  retorno := '';
+
+  if objetoItem.Codigo <= 0 then
+     retorno := 'Preencha o código do Item.';
+
+  // se o objeto for válido, o método Salvar é invocado
+  if retorno = '' then
+     objetoItem.Salvar(objetoItem);
+
+  result := retorno;
+end;
+
+end.

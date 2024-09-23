@@ -1,0 +1,39 @@
+unit controlePedido;
+
+interface
+
+uses
+  classePedido;
+
+type
+  TControlePedido = class
+  private
+
+  public
+    // procedimento para salvar o Pedido
+    function Salvar(const objetoPedido: TPedido): string;
+  end;
+
+implementation
+
+uses
+  StrUtils, SysUtils;
+
+{ TControlePedido }
+
+function TControlePedido.Salvar(const objetoPedido: TPedido): string;
+var retorno: string;
+begin
+  retorno := '';
+
+  if objetoPedido.Codigo <= 0 then
+    retorno := 'Preencha o código do Pedido.';
+
+  if objetoPedido.CodigoCliente <= 0 then
+    retorno := 'Preencha o nome do Pedido.';
+
+  // se o objeto for válido, o método Salvar é invocado
+  objetoPedido.Salvar(objetoPedido);
+end;
+
+end.
